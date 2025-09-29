@@ -24,6 +24,11 @@ namespace VacuumRobotSimulation
         }
     }
     
+    public bool IsEmpty(int x, int y)
+    {
+        return IsInBounds(x, y) && _grid[x, y] == CellType.Empty;
+    }
+
     public bool IsInBounds(int x, int y)
     {
         return x >= 0 &&  x < this.Width && y >= 0 && y < this.Height;
@@ -95,7 +100,7 @@ namespace VacuumRobotSimulation
         void Clean(Robot robot, Map map);
     }
 
-    // Strategy 1: S-Pattern Strategy (Original Logic)
+    // Strategy 1: S-Pattern Strategy
     public class S_PatternStrategy : ICleaningStrategy
 {
     public void Clean(Robot robot, Map map)
@@ -122,7 +127,7 @@ namespace VacuumRobotSimulation
     }
     }
 
-    // Strategy 2: Random Path Strategy (New Algorithm)
+    // Strategy 2: Random Path Strategy
     public class RandomPathStrategy : ICleaningStrategy
 {
     private Random _random;
@@ -179,58 +184,6 @@ namespace VacuumRobotSimulation
         }
         
         Console.WriteLine($"Random path cleaning completed after {moveCount} moves!");
-    }
-    }
-
-    // Strategy 3: Bonus - Spiral Pattern Strategy
-    public class SpiralPatternStrategy : ICleaningStrategy
-{
-    public void Clean(Robot robot, Map map)
-    {
-        Console.WriteLine("Starting Spiral Pattern Cleaning Strategy");
-        Console.WriteLine("Moving in spiral pattern from outside to inside...");
-        
-        int top = 0, bottom = map.Height - 1;
-        int left = 0, right = map.Width - 1;
-        
-        while (top <= bottom && left <= right)
-        {
-            for (int x = left; x <= right; x++)
-            {
-                robot.Move(x, top);
-                robot.CleanCurrentSpot();
-            }
-            top++;
-            
-            for (int y = top; y <= bottom; y++)
-            {
-                robot.Move(right, y);
-                robot.CleanCurrentSpot();
-            }
-            right--;
-            
-            if (top <= bottom)
-            {
-                for (int x = right; x >= left; x--)
-                {
-                    robot.Move(x, bottom);
-                    robot.CleanCurrentSpot();
-                }
-                bottom--;
-            }
-            
-            if (left <= right)
-            {
-                for (int y = bottom; y >= top; y--)
-                {
-                    robot.Move(left, y);
-                    robot.CleanCurrentSpot();
-                }
-                left++;
-            }
-        }
-        
-        Console.WriteLine("Spiral pattern cleaning completed!");
     }
     }
 
@@ -296,75 +249,108 @@ namespace VacuumRobotSimulation
 {
     public static void Main(string[] args)
     {
-        Console.WriteLine("=== Strategy Pattern Vacuum Robot Demo ===\n");
-        
-        // Initialize the map and robot
-        Map map = new Map(12, 6);
-        
-        // Add some dirt and obstacles for demonstration
-        map.AddDirt(3, 1);
-        map.AddDirt(7, 2);
-        map.AddDirt(5, 3);
-        map.AddDirt(9, 4);
-        map.AddDirt(2, 4);
-        map.AddObstacle(4, 2);
-        map.AddObstacle(8, 1);
-        map.AddObstacle(6, 4);
-        
+        Console.WriteLine("=== Vacuum Cleaner Robot ===\n");
+
+        int width = ReadPositiveInt("Enter map width: ");
+        int height = ReadPositiveInt("Enter map height: ");
+
+        Map map = new Map(width, height);
         Robot robot = new Robot(map);
-        
-        Console.WriteLine("Initial map setup:");
+
+        int maxPlaceable = width * height - 1; 
+        int obstacles = ReadBoundedInt(
+            $"Enter number of obstacles (0 to {maxPlaceable}): ", 0, maxPlaceable);
+
+        int remainingAfterObstacles = Math.Max(0, maxPlaceable - obstacles);
+        int dirts = ReadBoundedInt(
+            $"Enter number of dirt tiles (0 to {remainingAfterObstacles}): ", 0, remainingAfterObstacles);
+
+        PlaceRandomCells(map, obstacles, isObstacle: true);
+        PlaceRandomCells(map, dirts, isObstacle: false);
+
+        Console.WriteLine("\nInitial map setup:");
         map.Display(robot.X, robot.Y);
-        Thread.Sleep(2000);
-        
-        // Demonstrate Strategy 1: S-Pattern
-        Console.WriteLine("\n=== DEMONSTRATION 1: S-Pattern Strategy ===");
-        robot.SetStrategy(new S_PatternStrategy());
+
+        Console.WriteLine("\nChoose cleaning strategy:");
+        Console.WriteLine("1) S-Pattern");
+        Console.WriteLine("2) Random");
+
+        int choice = ReadBoundedInt("Select 1 or 2: ", 1, 2);
+        if (choice == 1)
+        {
+            robot.SetStrategy(new S_PatternStrategy());
+        }
+        else
+        {
+            int maxSteps = ReadPositiveInt("Enter number of random steps: ");
+            robot.SetStrategy(new RandomPathStrategy(maxSteps));
+        }
+
         robot.StartCleaning();
-        
-        Console.WriteLine("\nPress any key to continue to next strategy...");
+
+        Console.WriteLine("\nCleaning finished. Press any key to exit...");
         Console.ReadKey();
-        
-        // Reset the map for next demonstration
-        map = new Map(12, 6);
-        map.AddDirt(3, 1);
-        map.AddDirt(7, 2);
-        map.AddDirt(5, 3);
-        map.AddDirt(9, 4);
-        map.AddDirt(2, 4);
-        map.AddObstacle(4, 2);
-        map.AddObstacle(8, 1);
-        map.AddObstacle(6, 4);
-        robot = new Robot(map);
-        
-        // Demonstrate Strategy 2: Random Path
-        Console.WriteLine("\n=== DEMONSTRATION 2: Random Path Strategy ===");
-        robot.SetStrategy(new RandomPathStrategy(50));
-        robot.StartCleaning();
-        
-        Console.WriteLine("\nPress any key to continue to bonus strategy...");
-        Console.ReadKey();
-        
-        // Reset the map for bonus demonstration
-        map = new Map(12, 6);
-        map.AddDirt(3, 1);
-        map.AddDirt(7, 2);
-        map.AddDirt(5, 3);
-        map.AddDirt(9, 4);
-        map.AddDirt(2, 4);
-        map.AddObstacle(4, 2);
-        map.AddObstacle(8, 1);
-        map.AddObstacle(6, 4);
-        robot = new Robot(map);
-        
-        // Demonstrate Bonus Strategy: Spiral Pattern
-        Console.WriteLine("\n=== BONUS DEMONSTRATION: Spiral Pattern Strategy ===");
-        robot.SetStrategy(new SpiralPatternStrategy());
-        robot.StartCleaning();
-        
-        Console.WriteLine("\n=== All demonstrations completed! ===");
-        Console.WriteLine("Press any key to exit...");
-        Console.ReadKey();
+    }
+
+    private static int ReadPositiveInt(string prompt)
+    {
+        while (true)
+        {
+            Console.Write(prompt);
+            string input = Console.ReadLine();
+            if (int.TryParse(input, out int value) && value > 0)
+            {
+                return value;
+            }
+            Console.WriteLine("Please enter a positive integer.");
+        }
+    }
+
+    private static int ReadBoundedInt(string prompt, int minInclusive, int maxInclusive)
+    {
+        while (true)
+        {
+            Console.Write(prompt);
+            string input = Console.ReadLine();
+            if (int.TryParse(input, out int value) && value >= minInclusive && value <= maxInclusive)
+            {
+                return value;
+            }
+            Console.WriteLine($"Please enter an integer between {minInclusive} and {maxInclusive}.");
+        }
+    }
+
+    private static void PlaceRandomCells(Map map, int count, bool isObstacle)
+    {
+        if (count <= 0) return;
+        Random rng = new Random();
+        int placed = 0;
+        int attempts = 0;
+        int maxAttempts = count * 20 + 1000;
+        while (placed < count && attempts < maxAttempts)
+        {
+            int x = rng.Next(map.Width);
+            int y = rng.Next(map.Height);
+
+            if (x == 0 && y == 0)
+            {
+                attempts++;
+                continue;
+            }
+            if (map.IsEmpty(x, y))
+            {
+                if (isObstacle)
+                {
+                    map.AddObstacle(x, y);
+                }
+                else
+                {
+                    map.AddDirt(x, y);
+                }
+                placed++;
+            }
+            attempts++;
+        }
     }
 }
 }
